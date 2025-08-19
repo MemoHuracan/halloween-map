@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Halloween Map</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #map { height: 70vh; width: 100%; }
+  </style>
+</head>
+<body class="bg-gray-900 text-white">
+  <header class="p-4 text-center font-bold text-xl">🎃 Candy Zones</header>
+
+  <main class="px-4">
+    <div id="map" class="rounded-xl overflow-hidden shadow-lg"></div>
+
+    <div class="fixed left-1/2 -translate-x-1/2 bottom-6 flex gap-3">
+      <button id="markZoneBtn"
+        class="bg-orange-500 px-4 py-2 rounded-full text-white shadow-lg">
+        Mark Candy Zone
+      </button>
+      <button id="clearMarkersBtn"
+        class="bg-red-600 px-4 py-2 rounded-full text-white shadow-lg">
+        Clear Markers (visual)
+      </button>
+    </div>
+    <button id="clearAllDbBtn"
+  class="fixed bottom-28 left-1/2 -translate-x-1/2 bg-red-800 px-4 py-2 rounded-full text-white shadow-lg">
+  Clear ALL (Admin Only)
+</button>
+
+  </main>
+
+  <!-- Tu app primero (define window.initMap) -->
+  <script type="module" src="app.js"></script>
+
+  <!-- Google Maps con callback -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBoQHLq-WkVBh5dhwnxwgyZ_Tgz_2fy0lw&callback=initMap"
+    async defer loading="async"></script>
+</body>
+</html>
