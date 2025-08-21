@@ -1,182 +1,115 @@
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  getDocs, 
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-// Firebase config (la tuya)
-const firebaseConfig = {
-  apiKey: "AIzaSyBoQHLq-WkVBh5dhwnxwgyZ_Tgz_2fy0lw",
-  authDomain: "halloween-map-71aa8.firebaseapp.com",
-  projectId: "halloween-map-71aa8",
-  storageBucket: "halloween-map-71aa8.appspot.com",
-  messagingSenderId: "709800374697",
-  appId: "1:709800374697:web:9042e35a7ce708878bd4b8",
-};
-
-// Init Firebase/Firestore
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// Identificador por navegador (saber quién creó el marcador)
-const clientId = (() => {
-  const k = "halloween_client_id";
-  let v = localStorage.getItem(k);
-  if (!v) {
-    v = (self.crypto?.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random();
-    localStorage.setItem(k, v);
-  }
-  return v;
-})();
-
-// Globals
+// app.js robusto sin callback
 let map;
-let markers = []; // [{ id, ownerId, marker }]
+let markers = [];
+let markMode = false;
+let markerType = "candy";
 
-// Google Maps callback (DEbE ser global)
-window.initMap = function () {
-  const center = { lat: 50.8523, lng: -113.4697 }; // Carseland, AB
+// Íconos simples inline
+function toDataUrl(svg) {
+  return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg.trim());
+}
+const candyIcon   = toDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="14" fill="#ff4da6" stroke="#ffffff" stroke-width="2"/></svg>`);
+const pumpkinIcon = toDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="14" fill="#ff7a18" stroke="#ffb469" stroke-width="2"/></svg>`);
+const ghostIcon   = toDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="14" fill="#e8e8ff" stroke="#bdbdfd" stroke-width="2"/></svg>`);
 
-  // Asignar a la global 'map' (sin let/const aquí)
+const HALLOWEEN_STYLE = [
+  { elementType: "geometry", stylers: [{ color: "#0b0f1a" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ff7a18" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#ffb469" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#1f2a44" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#17321b" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] }
+];
+
+function iconFor(type) {
+  const url = type === "pumpkin" ? pumpkinIcon : type === "ghost" ? ghostIcon : candyIcon;
+  return { url, scaledSize: new google.maps.Size(36, 36), anchor: new google.maps.Point(18, 18) };
+}
+
+function startMap() {
+  const center = { lat: 50.8523, lng: -113.4697 };
   map = new google.maps.Map(document.getElementById("map"), {
-    center,
-    zoom: 16,
+    center, zoom: 15, styles: HALLOWEEN_STYLE,
+    mapTypeControl: false, fullscreenControl: false, streetViewControl: false,
   });
 
-  // Activa lógica UI después de crear el mapa
-  listenForZones();
-  setupMarkZoneButton();
-  setupClearVisualButton();
-  setupClearAllDbButton();
-};
+  const markBtn = document.getElementById("markZoneBtn");
+  const clearBtn = document.getElementById("clearMarkersBtn");
+  const clearAllBtn = document.getElementById("clearAllDbBtn");
 
-// Escucha Firestore y pinta marcadores
-function listenForZones() {
-  const zonesCollection = collection(db, "zones");
-  onSnapshot(zonesCollection, (snapshot) => {
-    clearMarkers();
-    snapshot.forEach((snap) => {
-      const data = snap.data();
-      const lat = data.lat ?? data.latitude;
-      const lng = data.lng ?? data.longitude;
-      if (typeof lat !== "number" || typeof lng !== "number") return;
+  markBtn.addEventListener("click", () => {
+    markMode = !markMode;
+    markBtn.classList.toggle("ring-4", markMode);
+    markBtn.classList.toggle("ring-orange-300", markMode);
+    markBtn.textContent = markMode ? "Mark Candy Zone (ON)" : "Mark Candy Zone";
+  });
 
-      const marker = new google.maps.Marker({
-        position: { lat, lng },
-        map,
-        title: data.description || "",
-      });
+  map.addListener("click", (e) => {
+    if (!markMode) return;
+    const m = new google.maps.Marker({ position: e.latLng, map, icon: iconFor(markerType) });
+    markers.push(m);
+  });
 
-      // Si el marcador es mío, puedo borrarlo con click (también en Firestore)
-      if (data.ownerId === clientId) {
-        marker.addListener("click", async () => {
-          const ok = confirm("Delete your candy zone?");
-          if (!ok) return;
-          try {
-            await deleteDoc(doc(db, "zones", snap.id));
-            // onSnapshot actualizará la vista
-          } catch (e) {
-            console.error("Error deleting zone:", e);
-            alert("Error deleting zone.");
-          }
-        });
-      } else {
-        // Si no es mío, solo muestro info (opcional)
-        marker.addListener("click", () => {
-          if (data.description) alert(data.description);
-        });
-      }
+  clearBtn.addEventListener("click", () => {
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+  });
 
-      markers.push({ id: snap.id, ownerId: data.ownerId, marker });
+  // Selector flotante 🍬🎃👻 (opcional)
+  const bar = document.createElement("div");
+  Object.assign(bar.style, {
+    position: "fixed", right: "16px", bottom: "16px", display: "flex",
+    gap: "8px", padding: "8px", background: "rgba(0,0,0,0.5)",
+    border: "1px solid #4b5563", borderRadius: "9999px", zIndex: 1000
+  });
+  [
+    { t: "candy",   label: "🍬" },
+    { t: "pumpkin", label: "🎃" },
+    { t: "ghost",   label: "👻" },
+  ].forEach(({ t, label }) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    Object.assign(b.style, {
+      fontSize: "18px", width: "40px", height: "40px",
+      borderRadius: "9999px", border: "1px solid #6b7280",
+      background: t === markerType ? "#4b5563" : "#1f2937", color: "white",
+      cursor: "pointer"
     });
+    b.onclick = () => {
+      markerType = t;
+      [...bar.children].forEach(c => c.style.background = "#1f2937");
+      b.style.background = "#4b5563";
+    };
+    bar.appendChild(b);
   });
-}
+  document.body.appendChild(bar);
 
-// Botón para marcar nueva zona
-function setupMarkZoneButton() {
-  const btn = document.getElementById("markZoneBtn");
-  if (!btn) {
-    console.warn("markZoneBtn not found in DOM");
-    return;
-  }
-  btn.addEventListener("click", () => {
-    alert("Click on the map to mark your candy zone!");
-
-    const once = map.addListener("click", async (event) => {
-      const lat = event.latLng.lat();
-      const lng = event.latLng.lng();
-      const description = prompt("Write a short description:");
-      if (!description) {
-        google.maps.event.removeListener(once);
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, "zones"), {
-          lat,
-          lng,
-          description,
-          activityLevel: "low",
-          ownerId: clientId,
-          timestamp: new Date(),
-        });
-        alert("Candy zone saved!");
-      } catch (e) {
-        console.error(e);
-        alert("Error saving candy zone.");
-      }
-
-      google.maps.event.removeListener(once);
-    });
-  });
-}
-
-// Botón para limpiar marcadores VISUALES (no borra DB)
-function setupClearVisualButton() {
-  const btn = document.getElementById("clearMarkersBtn");
-  if (!btn) return;
-  btn.addEventListener("click", () => clearMarkers());
-}
-
-// Quita marcadores del mapa (visual)
-function clearMarkers() {
-  markers.forEach(({ marker }) => marker.setMap(null));
-  markers = [];
-}
-// Botón para limpiar TODOS los marcadores de la DB (Admin Only)
-function setupClearAllDbButton() {
-  const btn = document.getElementById("clearAllDbBtn");
-  if (!btn) return;
-
-  btn.addEventListener("click", async () => {
-    // ⚠️ PIN simple en frontend (suficiente para uso comunitario, no “seguro” a nivel empresarial)
-    const pin = prompt("Admin PIN:");
-    if (pin !== "4826") {            // 👈 cambia  por el PIN que tú quieras
-      alert("Wrong PIN.");
+  // Firebase: intenta inicializar, pero no bloquea el mapa si falla
+  try {
+    const { initializeApp, getFirestore, getAuth, getFunctions } = window.firebaseImports || {};
+    if (!initializeApp) {
+      console.warn("Firebase no cargó aún. El mapa funciona localmente.");
       return;
     }
-
-    const ok = confirm("This will delete ALL zones from the database. Continue?");
-    if (!ok) return;
-
-    try {
-      const snap = await getDocs(collection(db, "zones"));
-      const deletions = [];
-      snap.forEach((docSnap) => {
-        deletions.push(deleteDoc(doc(db, "zones", docSnap.id)));
-      });
-      await Promise.all(deletions);
-      alert("All zones deleted.");
-    } catch (e) {
-      console.error(e);
-      alert("Error deleting all zones.");
-    }
-  });
+    const firebaseConfig = {
+      apiKey: "AIzaSyBoQHLq-WkVBh5dhwnxwgyZ_Tgz_2fy0lw",
+      authDomain: "halloween-map-71aa8.firebaseapp.com",
+      projectId: "halloween-map-71aa8",
+       storageBucket: "halloween-map-71aa8.firebasestorage.app",
+      messagingSenderId: "709800374697",
+      appId: "1:709800374697:web:9042e35a7ce708878bd4b8"
+    };
+    const appFB = initializeApp(firebaseConfig);
+    console.log("Firebase listo (conéctalo a Firestore/Auth cuando quieras).");
+  } catch (err) {
+    console.error("Firebase error (no bloquea):", err);
+  }
 }
 
+// Espera a que la API de Google esté lista
+window.addEventListener("load", () => {
+  if (window.google && google.maps) return startMap();
+  const i = setInterval(() => {
+    if (window.google && google.maps) { clearInterval(i); startMap(); }
+  }, 100);
+});
