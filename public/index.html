@@ -16,20 +16,23 @@
   <main class="px-4">
     <div id="map" class="rounded-xl overflow-hidden shadow-lg"></div>
 
-    <div class="fixed left-1/2 -translate-x-1/2 bottom-6 flex gap-3">
-      <button id="markZoneBtn"
-        class="bg-orange-500 px-4 py-2 rounded-full text-white shadow-lg">
-        Mark Candy Zone
-      </button>
-      <button id="clearMarkersBtn"
-        class="bg-red-600 px-4 py-2 rounded-full text-white shadow-lg">
-        Clear Markers (visual)
-      </button>
-    </div>
-    <button id="clearAllDbBtn"
-  class="fixed bottom-28 left-1/2 -translate-x-1/2 bg-red-800 px-4 py-2 rounded-full text-white shadow-lg">
+   <!-- Controles inferiores -->
+<div class="fixed left-1/2 -translate-x-1/2 bottom-4 sm:bottom-6 flex gap-2 sm:gap-3">
+  <button id="markZoneBtn"
+    class="bg-orange-500 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-white text-sm sm:text-base shadow-lg">
+    Mark Candy Zone
+  </button>
+  <button id="clearMarkersBtn"
+    class="bg-red-600 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-white text-sm sm:text-base shadow-lg">
+    Clear Markers (visual)
+  </button>
+</div>
+
+<button id="clearAllDbBtn"
+  class="fixed bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 bg-red-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-white text-sm sm:text-base shadow-lg">
   Clear ALL (Admin Only)
 </button>
+
 
   </main>
 
@@ -38,12 +41,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFunctions } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
-    window.firebaseImports = { initializeApp, getFirestore, getAuth, getFunctions };
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
+    window.firebaseImports = { initializeApp, getFirestore, getAuth, getFunctions, httpsCallable };
   </script>
 
   <!-- Google Maps SIN callback -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBoQHLq-WkVBh5dhwnxwgyZ_Tgz_2fy0lw" async defer></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDBXA1Jxv0Iaz6ARlMaIuk21YwIWzf06gk" async defer></script>
 
   <!-- Tu app después -->
   <script type="module" src="app.js"></script>

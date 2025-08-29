@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /markers/{docId} {
+      allow read: if true;
+      allow create: if true;
+
+      // Soft delete: solo si el clientId coincide y NO cambian otros campos
+      allow update: if
+        request.resource.data.deleted == true &&
+        resource.data.clientId == request.resource.data.clientId &&
+        request.resource.data.lat == resource.data.lat &&
+        request.resource.data.lng == resource.data.lng &&
+        request.resource.data.type == resource.data.type &&
+        request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false;
+    }
+  }
+}
